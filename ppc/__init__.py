@@ -58,7 +58,7 @@ class terminal(base):
 class any1(base):
     __slots__: List[Any] = []
 
-#TODO lookahead, any1
+#TODO lookahead
 
 class maybe(base):
     __slots__ = ["pattern"]
