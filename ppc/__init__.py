@@ -1,7 +1,7 @@
 # Python Parser Combinator library, rev 2
 
 # inf hack
-from typing import Any, Union
+from typing import Any, Union, List
 from types import FunctionType
 
 class _inf(object):
@@ -12,11 +12,16 @@ inf = _inf()
 
 #TODO parser output type
 class parse(object):
-    pass #TODO
+    __slots__ = ["remaining", "result", "error"]
+    def __init__(self, remaining: str, result: Any, error: str = None):
+        self.remaining = remaining
+        self.result = result
+        self.error = error
 
 #parsers
 
 class base(object):
+    __slots__: List[Any] = []
     def __add__(self, other) -> 'seq':
         if not isinstance(other, base): return NotImplemented
         return seq(self, other)
@@ -37,8 +42,6 @@ class base(object):
         return bound(self, function)
     def discard(self) -> 'discard':
         return discard(self)
-    def compile(self):
-        pass #TODO
     def parse(self, text, *args, **kwargs):
         pass #TODO
 
@@ -51,6 +54,9 @@ class terminal(base):
     __slots__ = ["terminal"]
     def __init__(self, terminal: Any):
         self.terminal = terminal
+
+class any1(base):
+    __slots__: List[Any] = []
 
 #TODO lookahead, any1
 
@@ -99,7 +105,7 @@ class discard(base):
         self.pattern = pattern
 
 class start(base):
-    pass
+    __slots__: List[Any] = []
 
 class end(base):
-    pass
+    __slots__: List[Any] = []
