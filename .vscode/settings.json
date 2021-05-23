@@ -1,0 +1,7 @@
+{
+    "python.autoComplete.extraPaths": [
+    "ppc"
+    ],
+    "python.linting.mypyEnabled": true,
+    "python.linting.enabled": true,
+}
