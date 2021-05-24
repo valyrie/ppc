@@ -1,37 +1,24 @@
 # Python Parser Combinator library, rev 2
 
-# inf hack
-from typing import Any, Union, List
+from collections import namedtuple
 from types import FunctionType
+from typing import Any, List
 
-class _inf(object):
-    def __repr__(self) -> str:
-        return "inf"
-
-inf = _inf()
-
-#TODO parser output type
-class parse(object):
-    __slots__ = ["remaining", "result", "error"]
-    def __init__(self, remaining: str, result: Any, error: str = None):
-        self.remaining = remaining
-        self.result = result
-        self.error = error
+#parses
+#TODO whole text storage, line tracking
+parse = namedtuple("parse", ["text", "result", "error"], defaults=[None])
 
 #parsers
 
-class base(object):
+#TODO fn to turn a parser into an error message
+class parser(object):
     __slots__: List[Any] = []
     def __add__(self, other) -> 'seq':
-        if not isinstance(other, base): return NotImplemented
+        if not isinstance(other, parser): return NotImplemented
         return seq(self, other)
     def __or__(self, other) -> 'alt':
-        if not isinstance(other, base): return NotImplemented
+        if not isinstance(other, parser): return NotImplemented
         return alt(self, other)
-    def rep(self, min: int, max: Union[int, _inf]=None) -> 'rep':
-        if not max:
-            max = min
-        return rep(self, min, max)
     def maybe(self) -> 'maybe':
         return maybe(self)
     def any(self) -> 'any':
@@ -42,70 +29,136 @@ class base(object):
         return bound(self, function)
     def discard(self) -> 'discard':
         return discard(self)
-    def parse(self, text, *args, **kwargs):
-        pass #TODO
+    def parse(self, text, *args, **kwargs) -> parse:
+        pass
 
-class forward(base):
+#TODO lookaround, arbitrary rep, start
+
+class forward(parser):
     __slots__ = ["_def"]
+    def __init__(self):
+        self._def: parser = None
     def __repr__(self):
         return repr(self._def)
+    def parse(self, text, *args, **kwargs) -> parse:
+        return self._def.parse(text, *args, **kwargs)
 
-class terminal(base):
+class terminal(parser):
     __slots__ = ["terminal"]
     def __init__(self, terminal: Any):
         self.terminal = terminal
+    def parse(self, text, *args, **kwargs) -> parse:
+        if not len(text):
+            return parse(text, None, self)
+        if text[0] != self.terminal:
+            return parse(text, None, self)
+        else:
+            return parse(text[1:], [text[0]])
 
-class any1(base):
+class any1(parser):
     __slots__: List[Any] = []
+    def parse(self, text, *args, **kwargs) -> parse:
+        if not len(text):
+            return parse(text, None, self)
+        else:
+            return parse(text[1:], [text[0]])
 
-#TODO lookahead
+class end(parser):
+    __slots__: List[Any] = []
+    def parse(self, text, *args, **kwargs) -> parse:
+        if len(text):
+            return parse(text, None, self)
+        else:
+            return parse(text, text)
 
-class maybe(base):
+class maybe(parser):
     __slots__ = ["pattern"]
-    def __init__(self, pattern):
-        self.pattern = pattern 
+    def __init__(self, pattern: parser):
+        self.pattern = pattern
+    def parse(self, text, *args, **kwargs) -> parse:
+        p = self.pattern.parse(text, *args, **kwargs)
+        if p.error:
+            return parse(text, [])
+        else:
+            return p
 
-class any(base):
+class any(parser):
     __slots__ = ["pattern"]
-    def __init__(self, pattern):
+    def __init__(self, pattern: parser):
         self.pattern = pattern
+    def parse(self, text, *args, **kwargs) -> parse:
+        p = self.pattern.parse(text, *args, **kwargs)
+        if p.error:
+            return parse(text, [])
+        while True:
+            q = self.pattern.parse(p.text, *args, **kwargs)
+            if q.error:
+                break
+            p = parse(q.text, p.result + q.result)
+        return p
 
-class some(base):
+class some(parser):
     __slots__ = ["pattern"]
-    def __init__(self, pattern):
+    def __init__(self, pattern: parser):
         self.pattern = pattern
+    def parse(self, text, *args, **kwargs) -> parse:
+        p = self.pattern.parse(text, *args, **kwargs)
+        if p.error:
+            return parse(p.text, None, self)
+        while True:
+            q = self.pattern.parse(p.text, *args, **kwargs)
+            if q.error:
+                break
+            p = parse(q.text, p.result + q.result)
+        return p
 
-class rep(base):
-    __slots__ = ["pattern", "min", "max"]
-    def __init__(self, pattern, min: int, max: Union[int, _inf]):
-        self.pattern = pattern
-        self.min = min
-        self.max = max
-
-class seq(base):
+class seq(parser):
     __slots__ = ["left", "right"]
-    def __init__(self, left, right):
+    def __init__(self, left: parser, right: parser):
         self.left = left
         self.right = right
+    def parse(self, text, *args, **kwargs) -> parse:
+        l = self.left.parse(text, *args, **kwargs)
+        if l.error:
+            return l
+        r = self.right.parse(l.text, *args, **kwargs)
+        if r.error:
+            return r
+        return parse(r.text, l.result + r.result)
 
-class alt(base):
+class alt(parser):
     __slots__ = ["left", "right"]
-    def __init__(self, left, right):
+    def __init__(self, left: parser, right: parser):
         self.left = left
         self.right = right
+    def parse(self, text, *args, **kwargs) -> parse:
+        l = self.left.parse(text, *args, **kwargs)
+        if not l.error:
+            return l
+        r = self.right.parse(text, *args, **kwargs)
+        if not r.error:
+            return r
+        return parse(text, [], self)
 
-class bound(base):
+class bound(parser):
     __slots__ = ["pattern", "function"]
-    def __init__(self, pattern, function: FunctionType):
+    def __init__(self, pattern: parser, function: FunctionType):
         self.pattern = pattern
+        self.function = function
+    def parse(self, text, *args, **kwargs) -> parse:
+        p = self.pattern.parse(text, *args, **kwargs)
+        if p.error:
+            return p
+        else:
+            return parse(p.text, self.function(p.result, *args, **kwargs))
 
-class discard(base):
+class discard(parser):
     __slots__ = ["pattern"]
-    def __init__(self, pattern):
+    def __init__(self, pattern: parser):
         self.pattern = pattern
-
-class start(base):
-    __slots__: List[Any] = []
-
-class end(base):
-    __slots__: List[Any] = []
+    def parse(self, text, *args, **kwargs) -> parse:
+        p = self.pattern.parse(text, *args, **kwargs)
+        if p.error:
+            return p
+        else:
+            return parse(p.text, [])
