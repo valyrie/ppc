@@ -13,21 +13,21 @@ parse = namedtuple("parse", ["text", "result", "error"], defaults=[None])
 #TODO fn to turn a parser into an error message
 class parser(object):
     __slots__: List[Any] = []
-    def __add__(self, other) -> 'seq':
+    def __add__(self, other) -> 'parser':
         if not isinstance(other, parser): return NotImplemented
         return seq(self, other)
-    def __or__(self, other) -> 'alt':
+    def __or__(self, other) -> 'parser':
         if not isinstance(other, parser): return NotImplemented
         return alt(self, other)
-    def maybe(self) -> 'maybe':
+    def maybe(self) -> 'parser':
         return maybe(self)
-    def any(self) -> 'any':
+    def any(self) -> 'parser':
         return any(self)
-    def some(self) -> 'some':
+    def some(self) -> 'parser':
         return some(self)
-    def bind(self, function) -> 'bound':
+    def bind(self, function) -> 'parser':
         return bound(self, function)
-    def discard(self) -> 'discard':
+    def discard(self) -> 'parser':
         return discard(self)
     def parse(self, text, *args, **kwargs) -> parse:
         pass
