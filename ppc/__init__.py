@@ -5,8 +5,8 @@ from types import FunctionType
 from typing import Any, Set, Tuple, List, Dict
 
 #parses
-#TODO whole text storage, line tracking
-parse = namedtuple("parse", ["text", "result", "error"], defaults=[None])
+#TODO line tracking, better error reporting
+parse = namedtuple("parse", ["text", "accepted", "result", "error"], defaults=[None])
 
 #parsers
 #TODO fn to turn a parser into an error message
@@ -48,27 +48,27 @@ class terminal(parser):
         self.terminal = terminal
     def parse(self, text, *args, **kwargs) -> parse:
         if not len(text):
-            return parse(text, None, self)
+            return parse(text, [], None, self)
         if text[0] != self.terminal:
-            return parse(text, None, self)
+            return parse(text, [], None, self)
         else:
-            return parse(text[1:], [text[0]])
+            return parse(text[1:], [text[0]], [text[0]])
 
 class any1(parser):
     __slots__: List[Any] = []
     def parse(self, text, *args, **kwargs) -> parse:
         if not len(text):
-            return parse(text, None, self)
+            return parse(text, [], None, self)
         else:
-            return parse(text[1:], [text[0]])
+            return parse(text[1:], [text[0]], [text[0]])
 
 class end(parser):
     __slots__: List[Any] = []
     def parse(self, text, *args, **kwargs) -> parse:
         if len(text):
-            return parse(text, None, self)
+            return parse(text, [], None, self)
         else:
-            return parse(text, text)
+            return parse(text, text, text)
 
 class maybe(parser):
     __slots__ = ["pattern"]
@@ -77,7 +77,7 @@ class maybe(parser):
     def parse(self, text, *args, **kwargs) -> parse:
         p = self.pattern.parse(text, *args, **kwargs)
         if p.error:
-            return parse(text, [])
+            return parse(text, [], [])
         else:
             return p
 
@@ -88,12 +88,12 @@ class any(parser):
     def parse(self, text, *args, **kwargs) -> parse:
         p = self.pattern.parse(text, *args, **kwargs)
         if p.error:
-            return parse(text, [])
+            return parse(text, [], [])
         while True:
             q = self.pattern.parse(p.text, *args, **kwargs)
             if q.error:
                 break
-            p = parse(q.text, p.result + q.result)
+            p = parse(q.text, p.accepted + q.accepted, p.result + q.result)
         return p
 
 class some(parser):
@@ -103,12 +103,12 @@ class some(parser):
     def parse(self, text, *args, **kwargs) -> parse:
         p = self.pattern.parse(text, *args, **kwargs)
         if p.error:
-            return parse(p.text, None, self)
+            return parse(p.text, [], None, self)
         while True:
             q = self.pattern.parse(p.text, *args, **kwargs)
             if q.error:
                 break
-            p = parse(q.text, p.result + q.result)
+            p = parse(q.text, p.accepted + q.accepted, p.result + q.result)
         return p
 
 class seq(parser):
@@ -122,7 +122,7 @@ class seq(parser):
         if key not in self.reccache:
             self.reccache.add(key)
         else:
-            return parse(text, None, self)
+            return parse(text, [], None, self)
         l = self.left.parse(text, *args, **kwargs)
         self.reccache.remove(key)
         if l.error:
@@ -130,7 +130,7 @@ class seq(parser):
         r = self.right.parse(l.text, *args, **kwargs)
         if r.error:
             return r
-        return parse(r.text, l.result + r.result)
+        return parse(r.text, l.accepted + r.accepted, l.result + r.result)
 
 class alt(parser):
     __slots__ = ["left", "right"]
@@ -144,7 +144,7 @@ class alt(parser):
         r = self.right.parse(text, *args, **kwargs)
         if not r.error:
             return r
-        return parse(text, [], self)
+        return parse(text, [], [], self)
 
 class bound(parser):
     __slots__ = ["pattern", "function"]
@@ -163,7 +163,7 @@ class bound(parser):
                 res = [res]
             else:
                 res = list(res)
-            return parse(p.text, res)
+            return parse(p.text, p.accepted, res)
 
 class discard(parser):
     __slots__ = ["pattern"]
@@ -174,4 +174,4 @@ class discard(parser):
         if p.error:
             return p
         else:
-            return parse(p.text, [])
+            return parse(p.text, [], [])
