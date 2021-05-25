@@ -2,14 +2,13 @@
 
 from collections import namedtuple
 from types import FunctionType
-from typing import Any, List
+from typing import Any, Set, Tuple, List, Dict
 
 #parses
 #TODO whole text storage, line tracking
 parse = namedtuple("parse", ["text", "result", "error"], defaults=[None])
 
 #parsers
-
 #TODO fn to turn a parser into an error message
 class parser(object):
     __slots__: List[Any] = []
@@ -32,7 +31,7 @@ class parser(object):
     def parse(self, text, *args, **kwargs) -> parse:
         pass
 
-#TODO lookaround, arbitrary rep, start
+#TODO lookaround, arbitrary rep, start, butnot (-)
 
 class forward(parser):
     __slots__ = ["_def"]
@@ -112,13 +111,21 @@ class some(parser):
             p = parse(q.text, p.result + q.result)
         return p
 
+#TODO detect and eleminate left recursion (not thread safe)
 class seq(parser):
-    __slots__ = ["left", "right"]
+    __slots__ = ["left", "right", "reccache"]
     def __init__(self, left: parser, right: parser):
         self.left = left
         self.right = right
+        self.reccache: Set[Tuple[str, ...]] = set()
     def parse(self, text, *args, **kwargs) -> parse:
+        key = tuple((repr(text), repr(args), repr(kwargs),))
+        if key not in self.reccache:
+            self.reccache.add(key)
+        else:
+            return parse(text, None, self)
         l = self.left.parse(text, *args, **kwargs)
+        self.reccache.remove(key)
         if l.error:
             return l
         r = self.right.parse(l.text, *args, **kwargs)
