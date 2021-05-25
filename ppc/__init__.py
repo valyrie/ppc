@@ -68,7 +68,7 @@ class end(parser):
         if len(text):
             return parse(text, [], None, self)
         else:
-            return parse(text, text, text)
+            return parse(text, [text], [text])
 
 class maybe(parser):
     __slots__ = ["pattern"]
