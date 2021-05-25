@@ -51,6 +51,8 @@ factor._def = (term + (times | over) + factor).bind(dofactor) | term
 
 expr._def = (expr + (plus | minus) + factor).bind(doexpr) | factor
 
+calc = expr + terminal("\n") + end()
+
 #repl
 if __name__ == '__main__':
       print("4 function calculator")
@@ -64,7 +66,7 @@ if __name__ == '__main__':
                   exit()
             if not len(line.strip()):
                 exit()
-            p = expr.parse(line)
+            p = calc.parse(line)
             if p.error:
                   print("bad input: syntax error")
             else:
