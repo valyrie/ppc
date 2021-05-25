@@ -30,7 +30,7 @@ digit = terminal("0") \
       | terminal("8") \
       | terminal("9")
 
-number = digit.some().bind(lambda result, *args, **kwargs: int("".join(result))) + skip_ws
+number = (terminal("-").maybe() + digit.some()).bind(lambda result, *args, **kwargs: int("".join(result))) + skip_ws
 
 openp = terminal("(") + skip_ws
 closep = terminal(")") + skip_ws
