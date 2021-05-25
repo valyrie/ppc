@@ -157,7 +157,14 @@ class bound(parser):
         if p.error:
             return p
         else:
-            return parse(p.text, self.function(p.result, *args, **kwargs))
+            res = self.function(p.result, *args, **kwargs)
+            if res is None:
+                res = p.result
+            if res is not tuple:
+                res = [res]
+            else:
+                res = list(res)
+            return parse(p.text, res)
 
 class discard(parser):
     __slots__ = ["pattern"]

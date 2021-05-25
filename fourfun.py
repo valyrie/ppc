@@ -6,15 +6,15 @@ from ppc import *
 #build a parser
 def dofactor(result, *args, **kwargs):
       if result[1] == "*":
-            return [result[0] * result[2]]
+            return result[0] * result[2]
       else:
-            return [result[0] // result[2]]
+            return result[0] // result[2]
 
 def doexpr(result, *args, **kwargs):
       if result[1] == "+":
-            return [result[0] + result[2]]
+            return result[0] + result[2]
       else:
-            return [result[0] - result[2]]
+            return result[0] - result[2]
 
 
 skip_ws = terminal(" ").any().discard()
@@ -30,7 +30,7 @@ digit = terminal("0") \
       | terminal("8") \
       | terminal("9")
 
-number = digit.some().bind(lambda result, *args, **kwargs: [int("".join(result))]) + skip_ws
+number = digit.some().bind(lambda result, *args, **kwargs: int("".join(result))) + skip_ws
 
 openp = terminal("(") + skip_ws
 closep = terminal(")") + skip_ws
@@ -42,7 +42,7 @@ over = terminal("/") + skip_ws
 
 expr = forward()
 
-subexpr = (openp + expr + closep).bind(lambda result, *args, **kwargs: result[1:-1])
+subexpr = (openp + expr + closep).bind(lambda result, *args, **kwargs: result[1])
 
 term = number | subexpr
 
@@ -53,7 +53,7 @@ expr._def = (expr + (plus | minus) + factor).bind(doexpr) | factor
 
 #repl
 if __name__ == '__main__':
-      print("4 function calculator example")
+      print("4 function calculator")
       print("supported operations: + - * / ( )")
       print("submit a blank line or press ^C to exit")
       while True:
