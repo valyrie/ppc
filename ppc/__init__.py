@@ -111,7 +111,6 @@ class some(parser):
             p = parse(q.text, p.result + q.result)
         return p
 
-#TODO detect and eleminate left recursion (not thread safe)
 class seq(parser):
     __slots__ = ["left", "right", "reccache"]
     def __init__(self, left: parser, right: parser):
