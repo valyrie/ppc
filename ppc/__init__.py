@@ -54,6 +54,18 @@ class terminal(parser):
         else:
             return parse(text[1:], [text[0]], [text[0]])
 
+class chrs(parser):
+    __slots__ = ["range"]
+    def __init__(self, start: str, stop: str):
+        self.range = range(ord(start), ord(stop) + 1)
+    def parse(self, text, *args, **kwargs) -> parse:
+        if not len(text):
+            return parse(text, [], None, self)
+        if not ord(text[0]) in self.range:
+            return parse(text, [], None, self)
+        else:
+            return parse(text[1:], [text[0]], [text[0]])
+
 class any1(parser):
     __slots__: List[Any] = []
     def parse(self, text, *args, **kwargs) -> parse:
